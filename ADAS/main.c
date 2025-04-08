@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "adas_shared.h"
-#include "ego_estimation.h"
+#include "ego_vehicle_estimation.h"
 #include "lane_selection.h"
 #include "target_selection.h"
 #include "acc.h"
@@ -61,7 +61,7 @@ int main(void)
                                &accTarget, &aebTarget);
 
     /* 4) ACC */
-    ACCMode_e accMode = ACC_ModeSelection(&accTarget, &egoData, &laneSelOut);
+    ACC_Mode_e accMode = ACC_ModeSelection(&accTarget, &egoData, &laneSelOut);
     float dt=0.01f; /* 10ms */
     float accDist= ACC_CalcAccel_Distance(&accTarget, &egoData, dt);
     float accSpeed=ACC_CalcAccel_Speed(&egoData, &laneSelOut, dt);

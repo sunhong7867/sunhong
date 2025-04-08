@@ -2,7 +2,7 @@
  * adas_shared.h
  *
  * - 전 모듈(Ego, Lane, Target, ACC, AEB, LFA, Arbitration)에서 공통 쓰이는 구조체 & 상수
- * - "Cut-in / Cut-out" & "곡선 여부" 반영
+ * - "Cut-in / Cut-out" & "곡선 여부" 등 반영
  ****************************************************************************/
 #ifndef ADAS_SHARED_H
 #define ADAS_SHARED_H
@@ -184,8 +184,8 @@ typedef struct {
     float ACC_Target_Accel_Y;
     float ACC_Target_Distance;
     float ACC_Target_Heading;
-    ObjectStatus_e ACC_Target_Status;
-    TargetSituation_e ACC_Target_Situation; /* Normal, CutIn, CutOut, Curve */
+    ObjectStatus_e   ACC_Target_Status;    /* Moving,Stopped,Stationary,Oncoming */
+    TargetSituation_e ACC_Target_Situation;/* Normal,CutIn,CutOut,Curve */
 } ACC_Target_t;
 
 typedef struct {
@@ -198,28 +198,31 @@ typedef struct {
     float AEB_Target_Accel_Y;
     float AEB_Target_Distance;
     float AEB_Target_Heading;
-    ObjectStatus_e AEB_Target_Status;
-    TargetSituation_e AEB_Target_Situation; /* Normal, CutIn, CutOut, Curve */
+    ObjectStatus_e   AEB_Target_Status;   /* Moving,Stopped,Stationary,Oncoming */
+    TargetSituation_e AEB_Target_Situation;/* Normal,CutIn,CutOut,Curve */
 } AEB_Target_t;
 
 /*=============================================================
  * 5) ACC/AEB 모드
  *============================================================*/
+/* 설계 코드에서 ACC는 'ACC_Mode_e'라 명명하므로 통일 */
 typedef enum {
     ACC_MODE_SPEED = 0,
     ACC_MODE_DISTANCE,
     ACC_MODE_STOP
-} ACCMode_e;
+} ACC_Mode_e;
 
 #define MAX_ACCEL  10.0f
 #define MIN_ACCEL -10.0f
 
+/* AEB 모드 */
 typedef enum {
     AEB_MODE_NORMAL = 0,
     AEB_MODE_ALERT,
     AEB_MODE_BRAKE
 } AEB_Mode_e;
 
+/* AEB 상수들 */
 #define AEB_MAX_BRAKE_DECEL  -10.0f
 #define AEB_MIN_BRAKE_DECEL  -2.0f
 #define AEB_MAX_BRAKE_SPEED   0.5f

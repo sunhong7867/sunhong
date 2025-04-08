@@ -3,59 +3,76 @@
 #include "lane_selection.h"
 
 /*---------------------------------------------------------
- * LaneSelection_Compute
- * - 설계서 2.2.3
+ * LaneSelection_Update
+ * - 설계서 2.2.3 "Lane Selection" 기능
  *---------------------------------------------------------*/
-int LaneSelection_Compute(const LaneData_t *pInLaneData,
-                          const EgoData_t *pEgoData,
-                          LaneSelectOutput_t *pLaneSelOut)
+int LaneSelection_Update(const LaneData_t *pLaneData,
+                         const EgoData_t  *pEgoData,
+                         LaneSelectOutput_t *pLaneOut)
 {
-    if(!pInLaneData || !pEgoData || !pLaneSelOut) return -1;
-
-    /* 1) 차선 유형 판단 (직선/곡선) */
-    pLaneSelOut->LS_Lane_Type = pInLaneData->Lane_Type; 
-    if(pInLaneData->Lane_Curvature < 1.0f) {
-        /* 0 or 잘못된 값이면 일단 직선 처리 */
-        pLaneSelOut->LS_Is_Curved_Lane = false;
+    if(!pLaneData || !pEgoData || !pLaneOut) {
+        return -1; /* invalid argument */
     }
-    else {
-        /* 곡률 반경 < 800 => 곡선 */
-        pLaneSelOut->LS_Is_Curved_Lane = 
-            (pInLaneData->Lane_Curvature < LANE_CURVE_THRESHOLD);
+
+    /* 초기화 (출력 구조체) */
+    memset(pLaneOut, 0, sizeof(LaneSelectOutput_t));
+
+    /*------------------------------------------------------
+     1) 차선 유형 판단 (직선 / 곡선) 및 곡률 전이
+    ------------------------------------------------------*/
+    /* Lane_Type 은 enum (직선, 곡선) */
+    pLaneOut->LS_Lane_Type = pLaneData->Lane_Type; 
+    /* 곡선 여부: 곡률 반경 < 800 => 곡선 */
+    if(pLaneData->Lane_Curvature > 0.0f && pLaneData->Lane_Curvature < LANE_CURVE_THRESHOLD) {
+        pLaneOut->LS_Is_Curved_Lane = true;
+    } else {
+        pLaneOut->LS_Is_Curved_Lane = false;
     }
 
     /* 곡률 전이 */
-    if(pInLaneData->Next_Lane_Curvature > 0.0f) {
-        float diff = fabsf(pInLaneData->Next_Lane_Curvature - pInLaneData->Lane_Curvature);
-        pLaneSelOut->LS_Curve_Transition_Flag = (diff > LANE_CURVE_DIFF_THRESHOLD);
+    if(pLaneData->Lane_Curvature > 0.0f && pLaneData->Next_Lane_Curvature > 0.0f) {
+        float curvature_diff = fabsf(pLaneData->Next_Lane_Curvature - pLaneData->Lane_Curvature);
+        if(curvature_diff > LANE_CURVE_DIFF_THRESHOLD) {
+            pLaneOut->LS_Curve_Transition_Flag = true;
+        } else {
+            pLaneOut->LS_Curve_Transition_Flag = false;
+        }
     } else {
-        pLaneSelOut->LS_Curve_Transition_Flag = false;
+        /* 0 이거나 유효X => 전이 판단 불가 => false */
+        pLaneOut->LS_Curve_Transition_Flag = false;
     }
 
-    /* 2) Heading Error, Lane Offset */
-    float headingDiff = pEgoData->Ego_Heading - pInLaneData->Lane_Heading;
-    /* 정규화 */
-    while(headingDiff>180.0f) headingDiff-=360.0f;
-    while(headingDiff<-180.0f)headingDiff+=360.0f;
+    /*------------------------------------------------------
+     2) 진행 방향 오차, 차선 중심 오차
+    ------------------------------------------------------*/
+    /* heading_diff_raw = Ego_Heading - Lane_Heading */
+    float heading_diff_raw = pEgoData->Ego_Heading - pLaneData->Lane_Heading;
+    /* 정규화(±180) */
+    while(heading_diff_raw >  180.0f) heading_diff_raw -= 360.0f;
+    while(heading_diff_raw < -180.0f) heading_diff_raw += 360.0f;
 
-    pLaneSelOut->LS_Heading_Error = headingDiff;
-    pLaneSelOut->LS_Lane_Offset   = pInLaneData->Lane_Offset; 
-    pLaneSelOut->LS_Lane_Width    = pInLaneData->Lane_Width;
+    pLaneOut->LS_Heading_Error = heading_diff_raw;
 
-    /* 3) 차선 내 여부 판단 */
-    float halfWidth = pInLaneData->Lane_Width * 0.5f;
-    if(fabsf(pInLaneData->Lane_Offset) < halfWidth){
-        pLaneSelOut->LS_Is_Within_Lane = true;
+    /* Lane Offset / Width */
+    pLaneOut->LS_Lane_Offset = pLaneData->Lane_Offset; 
+    pLaneOut->LS_Lane_Width  = pLaneData->Lane_Width;
+
+    /* 차선 내 주행 여부: offset < laneWidth/2 ? */
+    float offset_threshold = (pLaneData->Lane_Width * 0.5f);
+    if(fabsf(pLaneData->Lane_Offset) < offset_threshold) {
+        pLaneOut->LS_Is_Within_Lane = true;
     } else {
-        pLaneSelOut->LS_Is_Within_Lane = false;
+        pLaneOut->LS_Is_Within_Lane = false;
     }
 
-    /* 4) 차로 변경 상태 */
-    if(pInLaneData->Lane_Change_Status == LANE_CHANGE_KEEP){
-        pLaneSelOut->LS_Is_Changing_Lane = false;
-    }
-    else {
-        pLaneSelOut->LS_Is_Changing_Lane = true;
+    /*------------------------------------------------------
+     3) 차로 변경 상태 판단
+    ------------------------------------------------------*/
+    /* Lane_Change_Status == 유지 -> false, 그 외 -> true */
+    if(pLaneData->Lane_Change_Status == LANE_CHANGE_KEEP) {
+        pLaneOut->LS_Is_Changing_Lane = false;
+    } else {
+        pLaneOut->LS_Is_Changing_Lane = true;
     }
 
     return 0;
