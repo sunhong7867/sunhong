@@ -753,7 +753,7 @@ static float ACC_OutputSelection(ACCMode_e mode,
         return accelDist;
     }
     else if(mode==ACC_MODE_STOP){
-        return 0.0f;
+        return 0.0f; 
     }
     return 0.0f;
 }
