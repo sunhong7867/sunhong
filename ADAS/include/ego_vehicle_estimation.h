@@ -32,7 +32,7 @@ typedef struct {
     /* 칼만 필터 상태 [vx, vy, ax, ay, heading] 등 */
     float X[5];
     float P[25]; /* 5x5 공분산 */
-} EgoEstimationKFState_t;
+} EgoVehicleKFState_t;
 
 /*=== 노이즈 임계값, GPS 유효성 시간 ===*/
 /* 설계서상 ±3.0, ±30, ±10, 50ms 등 */
@@ -45,7 +45,7 @@ typedef struct {
 /* 설계서 2.2.2에서 "Ego Vehicle Estimation" 모듈 - Init/Update 예시 */
 
 /* 초기화: 칼만 필터 내부 상태, 이전값 등 */
-void EgoVehicleEstimation_Init(EgoEstimationKFState_t *pState);
+void InitEgoVehicleKFState(EgoVehicleKFState_t *kfState);
 
 /* 메인 함수: IMU+GPS 융합하여 EgoData 추정 */
 void EgoVehicleEstimation(
@@ -53,7 +53,7 @@ void EgoVehicleEstimation(
     const GPSData_t         *gpsData,
     const IMUData_t         *imuData,
     EgoData_t               *pEgoData,
-    EgoEstimationKFState_t  *pState
+    EgoVehicleKFState_t  *pState
 );
 
 #ifdef __cplusplus
